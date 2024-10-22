@@ -1,0 +1,117 @@
+# Declarar la variable JWT como global
+$global:jwtToken = ""
+
+# Función para registrar un usuario
+function Register-User {
+    $username = Read-Host "Ingresa el username para registro"
+    $password = Read-Host "Ingresa el password para registro"
+
+    $body = @{
+        username = $username
+        password = $password
+    } | ConvertTo-Json
+
+    $url = "http://localhost:3000/api/users/register"
+
+    $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
+
+    Write-Host "Respuesta del registro:"
+    $response
+}
+
+# Función para hacer login de un usuario y almacenar el token JWT
+function Login-User {
+    $username = Read-Host "Ingresa el username para login"
+    $password = Read-Host "Ingresa el password para login"
+
+    $body = @{
+        username = $username
+        password = $password
+    } | ConvertTo-Json
+
+    $url = "http://localhost:3000/api/users/login"
+
+    $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
+
+    # Asignar el token JWT obtenido del login a la variable global
+    $global:jwtToken = $response.token
+
+    Write-Host "Login exitoso, token JWT obtenido: $global:jwtToken"
+}
+
+# Función para crear un libro usando el token JWT
+function Create-Book {
+    if (-not $global:jwtToken) {
+        Write-Host "Por favor, inicia sesión primero."
+        return
+    }
+
+    $title = Read-Host "Ingresa el título del libro"
+    $author = Read-Host "Ingresa el autor del libro"
+    $year = Read-Host "Ingresa el año de publicación del libro"
+    $status = Read-Host "Ingresa el estado del libro (ej. disponible)"
+
+    $body = @{
+        title  = $title
+        author = $author
+        year   = $year
+        status = $status
+    } | ConvertTo-Json
+
+    $url = "http://localhost:3000/api/books"
+
+    # Realizar la petición POST con el token JWT en la cabecera
+    $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json" -Headers @{ Authorization = "Bearer $global:jwtToken" }
+
+    Write-Host "Libro creado exitosamente:"
+    $response
+}
+
+# Función para obtener libros usando el token JWT
+function Get-Books {
+    if (-not $global:jwtToken) {
+        Write-Host "Por favor, inicia sesión primero."
+        return
+    }
+
+    $url = "http://localhost:3000/api/books"
+
+    # Realizar la petición GET con el token JWT en la cabecera
+    $response = Invoke-RestMethod -Uri $url -Method Get -Headers @{ Authorization = "Bearer $global:jwtToken" }
+
+    Write-Host "Libros obtenidos:"
+    $response
+}
+
+# Menú cíclico para elegir la acción
+while ($true) {
+    Write-Host "Elige una opción:"
+    Write-Host "1. Registro"
+    Write-Host "2. Login"
+    Write-Host "3. Crear libro"
+    Write-Host "4. Obtener libros"
+    Write-Host "5. Salir"
+    $option = Read-Host "Opción"
+
+    switch ($option) {
+        "1" {
+            Register-User
+        }
+        "2" {
+            Login-User
+        }
+        "3" {
+            Create-Book
+        }
+        "4" {
+            Get-Books
+        }
+        "5" {
+            Write-Host "Saliendo..."
+            break
+        }
+        default {
+            Write-Host "Opción inválida"
+        }
+    }
+}
